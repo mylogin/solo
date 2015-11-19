@@ -1,0 +1,7 @@
+AddDefaultCharset utf-8
+php_flag register_globals off
+php_flag magic_quotes_gpc off
+
+RewriteEngine on
+RewriteCond $1 !^(index\.php|js|css|img|resources)
+RewriteRule ^(.*)$ index.php/$1
