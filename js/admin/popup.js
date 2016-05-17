@@ -7,7 +7,7 @@
  */
 
 var Popup = function() {
-	this.version = 1.02;
+	this.event_id = 'solopopup';
 	this.block = null;
 	this.overlay = null;
 	this.padding = 20;
@@ -18,13 +18,12 @@ var Popup = function() {
 	this.key_down_ctrl_left = null;
 	this.key_down_ctrl_right = null;
 	this.hook_before_block_center = null;
-	this.static_top = null;
-	this.static_left = null;
+	this.hook_before_close = null;
+	this.hook_before_show = null;
 	
 	this.opt = {
-		overlay: true,
-		scroll: true,
-		resize: true
+		'overlay': true,		
+		'resize.solopopup': true
 	};
 }
 Popup.prototype.show_overlay = function(callback) {
@@ -40,17 +39,15 @@ Popup.prototype.show_overlay = function(callback) {
 	});
 	this.overlay_center();
  	$('body').append(this.overlay);
- 	//$(window).bind('resize scroll', function() {_this.overlay_center.call(_this);});
-	$(window).bind('resize', function() {_this.overlay_center.call(_this);});
- 	$(this.overlay).bind('click', function() {_this.hide.call(_this);}); 	
+ 	$(window).bind('resize.'+_this.event_id, function() {_this.overlay_center.call(_this);}); 	
+ 	$(this.overlay).bind('click.'+_this.event_id, function() {_this.hide.call(_this);}); 	
 	this.overlay.animate({opacity: 0.7}, 50, function() {callback.call(_this);});
 }
 Popup.prototype.hide_overlay = function() {
 	var _this = this;	
+	$(window).unbind('resize.'+_this.event_id);	
+	$(this.overlay).unbind('click.'+_this.event_id);
 	this.overlay.animate({opacity: 0}, 50, function() {
-		//$(window).unbind('resize scroll');
-		$(window).unbind('resize');
-		$(this.overlay).unbind('click');
 		_this.overlay.remove();
 		_this.overlay = null;
 	});
@@ -64,10 +61,9 @@ Popup.prototype.show_block = function(callback) {
 		position: 'absolute',
 		zIndex: 600
 	});		
-	this.block_center(true);						
-	//var event = ['scroll', 'resize'];
-	var event = ['resize'];
-	for(var i in event) {
+	this.block_center(true);
+	var event = ['resize.'+_this.event_id];
+	for(var i = 0; i < event.length; i++) {
 		if(!this.opt[event[i]]) {
 			event.splice(i, 1);
 		}
@@ -75,18 +71,17 @@ Popup.prototype.show_block = function(callback) {
 	if(event.length) {
 		$(window).bind(event.join(' '), function() {_this.block_center.call(_this);});
 	}
-	$(document).bind('keydown', function(e) {_this.handle_key_down.call(_this, e);});	
+	$(document).bind('keydown.'+_this.event_id, function(e) {_this.handle_key_down.call(_this, e);});	
 	this.block.animate({opacity: 1}, 100, function() {if(callback) {callback.call(_this);}});
 }
 
 Popup.prototype.hide_block = function(callback) {
-	var _this = this;
+	var _this = this;	
 	this.call_in_array(this.hook_before_hide_block);
 	this.block.animate({opacity: 0}, 100, function() {
 		_this.block.css({display: 'none'});
-		//var event = ['scroll', 'resize'];
-		var event = ['resize'];
-		for(var i in event) {
+		var event = ['resize.'+_this.event_id];
+		for(var i = 0; i < event.length; i++) {
 			if(!_this.opt[event[i]]) {
 				event.splice(i, 1);
 			}
@@ -94,7 +89,7 @@ Popup.prototype.hide_block = function(callback) {
 		if(event.length) {
 			$(window).unbind(event.join(' '));
 		}
-		$(document).unbind('keydown');
+		$(document).unbind('keydown.'+_this.event_id);
 		_this.call_in_array(_this.hook_after_hide_block);
 		if(callback) {
 			callback.call(_this);
@@ -102,6 +97,9 @@ Popup.prototype.hide_block = function(callback) {
 	});
 }
 Popup.prototype.show = function(block, callback) {
+	if(this.hook_before_show) {
+		this.hook_before_show();
+	}
 	this.block = block;
 	if(this.opt.overlay && !this.overlay) {
 		this.show_overlay(function() {this.show_block(callback);});
@@ -111,6 +109,9 @@ Popup.prototype.show = function(block, callback) {
 	}		
 }
 Popup.prototype.hide = function(callback) {
+	if(this.hook_before_close) {
+		this.hook_before_close();
+	}
 	if($.isFunction(callback)) {
 		this.hide_block(callback);
 	}
@@ -139,28 +140,20 @@ Popup.prototype.block_center = function(open) {
 	}
 	var pos = this.get_pos();
 	var css = {};
-	if(this.static_top !== null) {
-		css.top = this.static_top;
+	if(pos.bh + this.padding < pos.wh) {
+		css.top = (pos.wh - pos.bh) / 2 + pos.st;
 	} else {
-		if(pos.bh + this.padding < pos.wh) {
-			css.top = (pos.wh - pos.bh) / 2 + pos.st;
-		} else {
-			if(open === true) {
-				css.top = pos.st + this.padding;
-			}			
-		}
+		if(open === true) {
+			css.top = pos.st + this.padding;
+		}			
 	}
-	if(this.static_left !== null) {
-		css.top = this.static_left;
-	} else {
-		if(pos.bw + this.padding < pos.ww) {
-			css.left = (pos.ww - pos.bw) / 2 + pos.sl;			
-		}
-		else {
-			if(open === true) {
-				css.left = pos.sl + this.padding;
-			}						
-		}
+	if(pos.bw + this.padding < pos.ww) {
+		css.left = (pos.ww - pos.bw) / 2 + pos.sl;			
+	}
+	else {
+		if(open === true) {
+			css.left = pos.sl + this.padding;
+		}						
 	}
 	if(css.top || css.left) {
 		this.block.css(css);
@@ -168,13 +161,11 @@ Popup.prototype.block_center = function(open) {
 }
 Popup.prototype.overlay_center = function() {
 	this.overlay.css({
-		//width: $(window).width() + $(window).scrollLeft() + 'px', 
-		//height: $(window).height() + $(window).scrollTop() + 'px'
-		width: $(document).width() + 'px',
-		height: $(document).height() + 'px'
+		'height':$(document).height() + 'px',
+		'width':$(window).width() + 'px'
 	});		
 }
-Popup.prototype.handle_key_down = function(e) {		
+Popup.prototype.handle_key_down = function(e) {
 	if(e.keyCode == 27) {
 		this.hide();
 	}
@@ -200,7 +191,7 @@ Popup.prototype.to_array = function(elem) {
 Popup.prototype.call_in_array = function(a) {
 	if(a) {
 		a = this.to_array(a);
-		for(var i in a) {
+		for(var i = 0; i < a.length; i++) {
 			a[i]();
 		}
 	}

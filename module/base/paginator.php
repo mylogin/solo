@@ -91,8 +91,17 @@ class paginator {
 				$url['path'] = implode('/', $path);
 			}
 		}
-		$this->href = '//'.$url['host'].(!empty($url['path']) && trim($url['path'], '/') ? '/'.trim($url['path'], '/') : '');
-		if($this->path_param || $this->close_slash) {
+		$this->href = '//';
+		if(!empty($url['host'])) {
+			$this->href .= $url['host'];
+		}
+		if(!empty($url['path']) && trim($url['path'], '/')) {
+			if($this->href != '//') {
+				$this->href .= '/';
+			}
+			$this->href .= trim($url['path'], '/');
+		}
+		if(($this->path_param || $this->close_slash) && substr($this->href, -1) != '/') {
 			$this->href .= '/';
 		}
 		if($this->show_one_str || $m_is_pages) {
