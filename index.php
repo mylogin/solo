@@ -360,7 +360,7 @@ class i {
 		}
 
 		$way = $this->way_to_string(array_intersect_key($argv_route, array_flip($this->conf['required'])));
-		if($ret = i()->db->query("SELECT * FROM `base_tree` WHERE `way` = '".$way."' AND `is_prototype` = 0")->fetch_assoc()) {
+		if($ret = i()->db->query("SELECT * FROM `base_tree` WHERE `way` = '".i()->db->real_escape_string($way)."' AND `is_prototype` = 0")->fetch_assoc()) {
 			return $ret;
 		}
 
